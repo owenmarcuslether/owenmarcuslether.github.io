@@ -10,6 +10,7 @@
             font-family: Arial, sans-serif;
             background-color: #121212;
             color: #ffffff;
+            overflow: hidden;
         }
         nav {
             position: fixed;
@@ -19,6 +20,7 @@
             padding: 1rem;
             display: flex;
             justify-content: center;
+            z-index: 1000;
         }
         nav a {
             color: #fff;
@@ -32,10 +34,12 @@
             justify-content: center;
             font-size: 2rem;
             text-align: center;
+            position: relative;
         }
         .projects {
             padding: 50px;
             text-align: center;
+            position: relative;
         }
         .project-tile {
             background: #1e1e1e;
@@ -51,6 +55,20 @@
             color: #0d6efd;
             margin: 0 10px;
         }
+        .background-elements {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .background-shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            transition: transform 0.05s linear;
+        }
         @media (max-width: 600px) {
             .welcome-section {
                 font-size: 1.5rem;
@@ -59,6 +77,7 @@
     </style>
 </head>
 <body>
+    <div class="background-elements"></div>
     <nav id="navbar">
         <a href="#welcome-section">Home</a>
         <a href="#projects">Projects</a>
@@ -85,5 +104,77 @@
         <a href="https://linkedin.com" target="_blank">LinkedIn</a>
         <a href="https://www.codewars.com/" target="_blank">CodeWars</a>
     </section>
+    
+    <script>
+        const backgroundContainer = document.querySelector('.background-elements');
+        const shapes = [];
+        let lastMouseX = null;
+        let lastMouseY = null;
+        let lastVelocityX = 0;
+        let lastVelocityY = 0;
+        
+        function createShape() {
+            let shape = document.createElement('div');
+            shape.classList.add('background-shape');
+            let size = Math.random() * 50 + 30;
+            shape.style.width = `${size}px`;
+            shape.style.height = `${size}px`;
+            shape.style.top = `${Math.random() * window.innerHeight}px`;
+            shape.style.left = `${Math.random() * window.innerWidth}px`;
+            shape.style.clipPath = Math.random() > 0.5 ? 'polygon(0 0, 100% 30%, 80% 100%, 20% 80%)' : 'polygon(10% 10%, 90% 0, 100% 80%, 50% 100%, 0 80%)';
+            backgroundContainer.appendChild(shape);
+            
+            shapes.push({ shape, speedX: 0, speedY: 0, size });
+        }
+
+        for (let i = 0; i < 10; i++) {
+            createShape();
+        }
+
+        function moveShapes(event) {
+            if (lastMouseX !== null && lastMouseY !== null) {
+                lastVelocityX = event.clientX - lastMouseX;
+                lastVelocityY = event.clientY - lastMouseY;
+                
+                shapes.forEach(obj => {
+                    let rect = obj.shape.getBoundingClientRect();
+                    let dx = rect.left + rect.width / 2 - event.clientX;
+                    let dy = rect.top + rect.height / 2 - event.clientY;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    let dotProduct = dx * lastVelocityX + dy * lastVelocityY;
+                    let projectedDistance = dotProduct / Math.sqrt(lastVelocityX * lastVelocityX + lastVelocityY * lastVelocityY);
+                    
+                    if (distance < 75 && projectedDistance > 0) {
+                        let factor = (75 - distance) / 50;
+                        obj.speedX += lastVelocityX * factor;
+                        obj.speedY += lastVelocityY * factor;
+                    }
+                });
+            }
+            lastMouseX = event.clientX;
+            lastMouseY = event.clientY;
+        }
+
+        function updateShapes() {
+            shapes.forEach(obj => {
+                let rect = obj.shape.getBoundingClientRect();
+                if (rect.left + obj.speedX < 0 || rect.right + obj.speedX > window.innerWidth) {
+                    obj.speedX *= -0.8;
+                }
+                if (rect.top + obj.speedY < 0 || rect.bottom + obj.speedY > window.innerHeight) {
+                    obj.speedY *= -0.8;
+                }
+                obj.shape.style.left = `${rect.left + obj.speedX}px`;
+                obj.shape.style.top = `${rect.top + obj.speedY}px`;
+                obj.speedX *= 0.95;
+                obj.speedY *= 0.95;
+            });
+            requestAnimationFrame(updateShapes);
+        }
+        
+        window.addEventListener('mousemove', moveShapes);
+        updateShapes();
+    </script>
 </body>
 </html>
